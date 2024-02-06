@@ -23,8 +23,8 @@ app.use(credentials);
 const cors = require('cors');
 
 let corsOptions = {
+    credentials: 'true'
     origin: 'https://mimlyricstest2.onrender.com',    
-    credentials: 'true',
     method: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']   
 }
 app.use(cors(corsOptions));
@@ -46,7 +46,7 @@ const io = new Server(httpServer, {
   maxHttpBufferSize: 1e8,
   path: "/my-custom-path",*/
   cors: {
-    //origin: "http://localhost:3000",
+    credentials: 'true',
     origin: function(origin, callback) {
         if(allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
@@ -55,7 +55,6 @@ const io = new Server(httpServer, {
         }
     },
     methods: ["GET, POST, PUT, DELETE"],
-    credentials: true,
   },
 });
 const port = process.env.PORT || 5175;
