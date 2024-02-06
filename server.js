@@ -23,7 +23,7 @@ app.use(credentials);
 const cors = require('cors');
 
 let corsOptions = {
-    credentials: 'true'
+    credentials: 'true',
     origin: 'https://mimlyricstest2.onrender.com',    
     method: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']   
 }
