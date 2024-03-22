@@ -49,13 +49,13 @@ const SEARCH_LYRIC_URL = "/api/v1/lyric/search";
 const upload = multer({storage,limits: {fileSize: 2000_000_000}});
 const { searchLyrics, EditLyric, deleteLyric, postLyric, getLyric, 
     getLyricById, lyricViews, likeLyric, lyricRecommendation} = require("../controllers/lyricController");
-router.route("/lyric").post(upload.array("files", 10),postLyric);
+router.route("/lyric").post(upload.array("files", 2),postLyric);
 router.route("/lyric/:category").get(getLyric);
 router.route("/lyric/get/:id").get(getLyricById);
-router.route("/lyric/edit/:id").put(upload.array("files", 10),EditLyric);
+router.route("/lyric/edit/:id").put(upload.array("files", 2),EditLyric);
 router.route("/lyric/:id").delete(deleteLyric);
 router.route("/lyric/search/:searchId").get(searchLyrics);
 router.route("/lyric/views/:mediaId").put(lyricViews);
 router.route("/lyric/likes/:mediaId").put(likeLyric);
-router.route("/lyric/recommendation/:category").put(lyricRecommendation);
+router.route("/lyric/:category/recommendation").put(lyricRecommendation);
 module.exports = router;
