@@ -5,7 +5,7 @@ const Lyric = require("../models/Lyric");
 const DIR = "/public/mimlyrics";
 
 const postLyric =  asyncHandler ( async (req, res) => {
-
+    //console.log(req.body.artists);
     try {
         console.log("lyrics has been posted");
         //console.log(req.files);
@@ -27,8 +27,6 @@ const postLyric =  asyncHandler ( async (req, res) => {
                 }
                 else if(req.files[i].mimetype.split("/")[0] === 'audio') {
                     let ofilename = req.files[i].originalname
-                    extension = path.extname(ofilename);
-                    size = req.files[i].size;
                     destination1 = req.files[i].destination.split(".")[1];
                     pathx = req.protocol + "://" + req.get("host") + destination1 + "/" + req.files[i].filename
                     console.log(pathx);
@@ -36,12 +34,11 @@ const postLyric =  asyncHandler ( async (req, res) => {
                     originalname = req.files[i].originalname;                    
                 }
             }
-            console.log(photoy, audio)
-            let {category, title, lyric, description, artistName,
-             points, country, isPopular, isReviewed, photo} = req.body;
-            artistName = artistName.split("/");
-            const lyricx = await Lyric.create({path:pathx, photo:photox, originalname: originalname, lyric:lyric, extension: extension, 
-                    size: size, category: category, title:title, description: description, artistName: artistName, points: points, country: country,
+            //console.log(photoy, audio)
+            let {category, title, lyric, description, artists,
+             points, country, isPopular, isReviewed, genre, photo} = req.body;
+            const lyricx = await Lyric.create({path:pathx, photo:photox, genre: genre, lyric:lyric, 
+                    originalname: originalname,category: category, title:title, description: description, artists: artists, points: points, country: country,
                     isPopular: isPopular, isReviewed: isReviewed });
             await lyricx.save();
             console.log("has been posted");
@@ -56,7 +53,7 @@ const postLyric =  asyncHandler ( async (req, res) => {
 const getLyric =  async (req, res) => {
     try {
         const {category} = req.params;
-        const lyrics = await Lyric.find({category: category});
+        const lyrics = await Lyric.find({category: category}).sort({createdAt:-1})
         return res.status(201).json({lyrics});
     }catch(err) {
         return res.status(404).json({message: `No lyric exist`})
@@ -109,7 +106,7 @@ const deleteLyric =  asyncHandler( async (req, res) => {
             fs.unlink(deletePhoto, (err)=> {
                 if (err) throw err;
             })
-            console.log("file has been deleted successfully");
+            console.log("files has been deleted successfully");
         });
     }
     return res.status(200).json('successfully deleted file'); 
@@ -117,6 +114,7 @@ const deleteLyric =  asyncHandler( async (req, res) => {
 
 
 const EditLyric = async (req, res) => {
+    console.log("HEYYY EDIT");
     const {id} = req.params
     const lyric = await Lyric.findById({_id:id});
     if(lyric) {
@@ -153,7 +151,6 @@ const EditLyric = async (req, res) => {
                 }
                
                 else if(req.files[i].mimetype.split("/")[0] === 'audio') {
-                    const size = req.files[i].size;
                     const destination1 = req.files[i].destination.split(".")[1];
                     lyric.path = req.protocol + "://" + req.get("host") + destination1 + "/" + req.files[i].filename
                     console.log(lyric.path);
@@ -162,10 +159,9 @@ const EditLyric = async (req, res) => {
             }
             //console.log(lyric.photo, lyric.path);
         }
-        let artistName = req.body.artistName.split("/");
         lyric.path = lyric.path;;
         lyric.photo = lyric.photo;
-        lyric.artistName = artistName || lyric.artistName,
+        lyric.artists = req.body.artists || lyric.artists,
         lyric.title = req.body.title || lyric.title,
         lyric.description = req.body.description || lyric.description
         lyric.country = req.body.country || lyric.country
@@ -173,11 +169,12 @@ const EditLyric = async (req, res) => {
         lyric.points = req.body.points || lyric.points
         lyric.famous = req.body.famous || lyric.famous
         lyric.lyric = req.body.lyric || lyric.lyric
-        console.log("lyrics has been posted");
+        //console.log("lyrics has been posted");
+        //console.log(req.body.lyric);
         //console.log(req.files);
-
+        console.log(lyric);
         const updatedLyric = await lyric.save();
-        console.log(updatedLyric);
+        //console.log(updatedLyric);
         return res.status(201).json({updatedLyric});
 
     }else {
@@ -193,17 +190,19 @@ const likeLyric = asyncHandler (async (req, res) => {
     const likeExists = await Lyric.findOne({_id:mediaId}).where({'likes': userId });
     //console.log(likeExists);
     if(likeExists) {
-        const lyric = await Lyric.findByIdAndUpdate({_id: mediaId}, {$pull: {likes: userId}}, {new: true, validator: true});
+        const lyric = await Lyric.findByIdAndUpdate({_id: mediaId}, {$pull: {likes: userId}}, {new: true, validator: true, includeResultMetadata: true});
         console.log('existed and has been pulled');
         if(lyric) {
-            return res.status(201).json({lyric});
+            console.log(lyric);
+            return res.status(201).json({lyric:lyric.value});
         }
     }else {
-        const lyric = await Lyric.findByIdAndUpdate({_id: mediaId}, {$push: {likes: userId}}, {new: true, validator: true});
+        const lyric = await Lyric.findByIdAndUpdate({_id: mediaId}, {$push: {likes: userId}}, {new: true, validator: true, includeResultMetadata: true});
         //console.log(lyric);
         console.log("not existed and has been pushed");
         if(lyric) {
-            return res.status(201).json({lyric});
+            //console.log(lyric)
+            return res.status(201).json({lyric: lyric.value});
         }
     }
 
@@ -222,23 +221,18 @@ const lyricRecommendation = async (req, res) => {
     console.log("LET'SS StARt");
     let lyrics = [];
     let lyricx = [];
-    let {artistName} = req.body;
-    let {category} = req.params;
-    console.log(artistName, category);
-    artistName ? artistName : artistName = []
-    console.log(artistName);
-    if(artistName.length == 1) {
-        lyrics = await Lyric.find({artistName: artistName[0]}).limit(10);
-        console.log(lyrics);
-    }
-    else if(artistName.length == 2) {
-        lyrics = await Lyric.find({$or: [{artistName: artistName[0]}, {artistName: artistName[1]}]}).limit(10);
-    }else if(artistName.length == 3) {
-        lyrics = await Lyric.find({$or: [{artistName: artistName[0]}, {artistName: artistName[1]}, {artistName: artistName[2]}] });
+    let {artists} = req.body;
+    const {category} = req.params;
+    console.log(artists);
+    if(artists.length == 1) {
+        const lyricsF = await Lyric.find({});
+        lyrics = await lyricsF.filter(lyric => lyric.artists.includes(artists[0]))
     }else {
-        lyricx = await Lyric.aggregate([{$sample: {size: 4}}])
+        lyrics = await Lyric.aggregate([{$sample: {size: 4}}])   
     }
-    lyricx = await Lyric.aggregate([{$sample: {size: 4}}])
+    //lyricx = await Lyric.aggregate([{$sample: {size: 4}}])
+    //lyricx = lyricsF.filter(lyric => lyric.category === category || lyric.artists.includes(artists[0]));
+    lyricx = await Lyric.find({$or: [{category:category}, {artists: artists.includes(artists[0])}]}).limit(6)
     return res.status(201).json({lyrics, lyricx})
 }
 
