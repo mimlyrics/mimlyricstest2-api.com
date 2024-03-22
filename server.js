@@ -23,8 +23,8 @@ app.use(credentials);
 const cors = require('cors');
 
 let corsOptions = {
-    credentials: 'true',
-    origin: 'https://mimlyricstest2.onrender.com',    
+    credentials: true,
+    origin: 'https://mimlyricstest4.onrender.com',    
     method: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']   
 }
 app.use(cors(corsOptions));
@@ -33,11 +33,29 @@ require('dotenv').config();
 
 const httpServer = createServer(app);
 
+var allowedOrigins = [ 'https://mimlyricstest4.onrender.com',
+  'https://mimlyricstest2.onrender.com','http://localhost:3001']
 
-var allowedOrigins = [ 'https://mimlyricstest.onrender.com',
-  'https://mimlyricstest2.onrender.com','http://localhost:3000']
-
-const io = new Server(httpServer);
+const io = new Server(httpServer, {
+  /*sid: "lv_VI97HAXpY6yYWAAAC",
+  upgrades: ["websocket"],
+  pingInterval: 70000,
+  pingTimeout: 60000,
+  maxPayload: 1e6,
+  maxHttpBufferSize: 1e8,
+  path: "/my-custom-path",*/
+  cors: {
+    credentials: true,
+    origin: function(origin, callback) {
+        if(allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        }else {
+            callback(new Error('Not allowed by cors'));
+        }
+    },
+    methods: ["GET, POST, PUT, DELETE"],
+  },
+});
 const port = process.env.PORT || 5175;
 const passportSetUp = require('./utils/passport-google');
 
@@ -70,6 +88,16 @@ const commentRoutes = require("./routes/commentRoutes");
 app.use("/api/v1", commentRoutes);
 const albumRoutes = require("./routes/albumRoutes");
 app.use("/api/v1", albumRoutes);
+const artistRoutes = require("./routes/artistRoutes");
+app.use("/api/v1", artistRoutes);
+const newsRoutes = require("./routes/newsRoutes");
+app.use("/api/v1", newsRoutes);
+const notificationRoutes = require('./routes/notificationRoutes');
+app.use("/api/v1", notificationRoutes);
+const appDataRoutes = require('./routes/appDataRoutes');
+app.use("/api/v1", appDataRoutes);
+const editorRoutes = require('./routes/editorRoutes');
+app.use('/api/v1', editorRoutes);
 // CHAT MESSAGE
 
 let users = [];
