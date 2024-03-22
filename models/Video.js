@@ -5,15 +5,8 @@ const videoSchema = mongoose.Schema({
         type: String,
         required: true
     },
-    originalname: {
+    photo: {
         type: String,
-        required: true
-    },
-    extension: {
-        type: String,
-    },
-    size: {
-        type: Number
     },
     category: {
         type: String,
@@ -30,10 +23,11 @@ const videoSchema = mongoose.Schema({
         trim: true,
         lowerCase: true,
     },
-    artistName: {
-        type: String,
-        trim: true,
-        lowerCase: true
+    artists: {
+        type: [String],
+    },
+    genre: {
+        type: String
     },
     download: {
         type: Number,
