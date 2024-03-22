@@ -4,20 +4,90 @@ const Album = require("../models/Album");
 const fs = require("fs");
 
 const createAlbum = asyncHandler(async (req, res) => {
-  console.log(req.file);
-  if(req.file) {
-    const photox = req.protocol + "://" + req.get("host") + "/public/" + req.file.filename;
     const {name, title, category, artistName, 
-        points, country, isPopular, description} = req.body; 
-    const album = await Album.create({name:name, title:title, category:category, artistName: artistName,
-         points:points, country: country, photo:photox, isPopular: isPopular, description: description});
+        points, country, isPopular, description, date} = req.body; 
+    const album = await Album.create({name:name, title:title, category:category, date: date, artistName: artistName,
+        points:points, country: country, isPopular: isPopular, description: description});
     return res.status(201).json({album});
-  }
+})
+
+const createPhotoCover = asyncHandler(async (req, res) => {
+    const {albumId} = req.params;
+    const album = await Album.findOne({_id: albumId});
+    console.log("YEAH");
+    //console.log(req.file);
+    if(req.file && album.photo) {
+        //console.log("HEE");
+        const photox = req.protocol + "://" + req.get("host") + "/" + req.file.path;
+        const hostFile =   req.get("host");
+        //console.log(hostFile);
+        const splitAlbumPhoto = album.photo.split(hostFile);
+        const deleteAlbumPhoto = "." + splitAlbumPhoto[1];
+        console.log(deleteAlbumPhoto);
+        fs.unlink(deleteAlbumPhoto, (err) => {
+            if (err) console.log(err);
+            console.log("album photo cover has been deleted successfully");
+        })
+        album.photo = photox || album.photo;
+        await album.save();
+        //console.log(album);
+        return res.status(201).json({album})
+    }else {
+        const photox = req.protocol + "://" + req.get("host") + "/" + req.file.path;
+        album.photo = photox || album.photo;
+        await album.save();
+        console.log(album);
+        return res.status(201).json({album})          
+    }  
+})
+
+const updateAlbum = asyncHandler(async (req, res) => {
+    console.log(req.file);
+    const {albumId} = req.params;
+    const album = await Album.findOne({_id: albumId});
+    if(req.file) {
+        const photox = req.protocol + "//:" + req.get("host") + "/" + req.file.path;
+        album.name = req.body.name || album.name;
+        album.title = req.body.title || album.title;
+        album.category = req.body.category || album.category;
+        album.artistName = req.body.artistName || album.artistName;
+        album.points = req.body.points || album.points;
+        album.country = req.body.country || album.country;
+        album.isPopular = req.body.isPopular || album.isPopular;
+        album.description = req.body.description || album.description;
+        album.date = req.body.date || album.date;
+        await album.save();
+        return res.status(201).json({album});
+    }else {
+        album.name = req.body.name || album.name;
+        album.title = req.body.title || album.title;
+        album.category = req.body.category || album.category;
+        album.artistName = req.body.artistName || album.artistName;
+        album.points = req.body.points || album.points;
+        album.country = req.body.country || album.country;
+        album.isPopular = req.body.isPopular || album.isPopular;
+        album.description = req.body.description || album.description;
+        album.date = req.body.date || album.date;
+        await album.save();
+        return res.status(201).json({album});
+    }
 })
 
 const getAlbums = asyncHandler(async (req, res) => {
     const {category} = req.params;
-    const albums = await Album.find({category: category});
+    const albums = await Album.find({category: category})
+    return res.status(201).json({albums});
+})
+
+const getAlbumsByGenre = asyncHandler(async (req, res) => {
+    const {genre} = req.params;
+    const albums = await Album.find({genre: genre})
+    return res.status(201).json({albums});
+})
+
+const getAlbumsByCountry = asyncHandler(async (req, res) => {
+    const {country} = req.params;
+    const albums = await Album.find({country: country});
     return res.status(201).json({albums});
 })
 
@@ -27,8 +97,13 @@ const clearAlbums = asyncHandler(async(req, res) => {
 })
 
 const getRecentAlbum = asyncHandler(async (req, res) => {
-    const album = await Album.find({}).limit(1);
-    //console.log(album);
+      const  album = await Album.find({}).sort({_id: -1}).limit(1);
+      return res.status(201).json({album});
+})
+
+const getAlbumById = asyncHandler(async (req, res) => {
+    const {albumId} = req.params;
+    const album = await Album.find({_id: albumId}).limit(1);
     return res.status(201).json({album});
 })
 
@@ -54,6 +129,7 @@ const editAlbum = asyncHandler(async (req, res) => {
         album.isPopular = req.body.isPopular || album.isPopular;
         album.photo = photox || album.photo;
         album.points = req.body.points || album.points;
+        album.date = req.body.date || album.date;
         await album.save();
         //console.log(album);
         return res.status(201).json({album});
@@ -68,6 +144,7 @@ const editAlbum = asyncHandler(async (req, res) => {
             album.isPopular = req.body.isPopular || album.isPopular;
             album.photo = album.photo;
             album.points = req.body.points || album.points;
+            album.date = req.body.date || album.date;
             await album.save();
             return res.status(201).json({album});        
         }
@@ -93,11 +170,11 @@ const searchAlbums = async () => {
 const audioAlbum = asyncHandler(async (req, res) => {
     const {albumId} = req.params;
     let audios = [];
-    console.log(albumId);
+    //console.log(albumId);
     console.log("yess");
     if(req.files) {
         const destination = req.files[0].destination.split(".")[1];
-        console.log(destination);
+        //console.log(destination);
         for(let i=0; i<req.files.length;i++) {
             const mediax = {audio: req.protocol + "://" + req.get("host") + destination + "/" + req.files[i].filename, originalname: req.files[i].originalname};
             audios.push(mediax);
@@ -114,11 +191,12 @@ const audioAlbum = asyncHandler(async (req, res) => {
 
 const editAlbum2 = asyncHandler(async (req, res) => {
     const {albumId} = req.params;
-    let {text, artistName, title} = req.body;
+    let {text, artistName, title, points} = req.body;
     console.log("heyy");
-    artistName = artistName.split("/"); 
     const album = await Album.updateOne({'lyric._id': albumId}, {$set: {'lyric.$.title': title, 
-    'lyric.$.artistName': artistName, 'lyric.$.text': text }});  
+    'lyric.$.artistName': artistName, 'lyric.$.text': text, 'lyric.$.points': points }}, {}); 
+    console.log(album);
+    return res.status(201).json({album});
 })
 
 const deleteAlbum = asyncHandler(async (req, res) => {
@@ -130,4 +208,4 @@ const deleteAlbum = asyncHandler(async (req, res) => {
 })
 
 module.exports ={createAlbum, audioAlbum, getRecentAlbum, editAlbum2, 
-    editAlbum, deleteAlbum, clearAlbums, getAlbums, searchAlbums};
+    editAlbum, getAlbumsByGenre, deleteAlbum, clearAlbums, updateAlbum, createPhotoCover, getAlbumsByCountry, getAlbumById, getAlbums, searchAlbums};
