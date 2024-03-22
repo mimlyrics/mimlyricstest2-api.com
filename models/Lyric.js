@@ -7,20 +7,12 @@ const lyricSchema = mongoose.Schema({
     photo: {
         type: String
     },
-    originalname: {
-        type: String,
-        required: true
-    },
     lyric: String,
-    extension: {
-        type: String,
-    },
-    size: {
-        type: Number
-    },
     category: {
         type: String,
-        required: true
+    },
+    genre: {
+        type: String,
     },
     title: {
         type: String,
@@ -28,7 +20,7 @@ const lyricSchema = mongoose.Schema({
     description: {
         type: String,
     },
-    artistName: {
+    artists: {
         type: Array,
     },
     downloads: {
@@ -65,7 +57,7 @@ const lyricSchema = mongoose.Schema({
     isPopular: {
         type: Boolean,
         default: () => false  
-    }
+    },
 }, {
     timestamps: true
 })
