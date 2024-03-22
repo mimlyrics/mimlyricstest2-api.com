@@ -38,7 +38,7 @@ const getCommentResponse = asyncHandler(async (req, res) => {
     }
 })
 
-const getComment = asyncHandler(async (req, res) => {
+const getCommentById = asyncHandler(async (req, res) => {
     const {mediaId} = req.params;
     const comments = await Comment.find({mediaId: mediaId});
     //console.log(comments);
@@ -47,20 +47,23 @@ const getComment = asyncHandler(async (req, res) => {
 })
 
 const likeComment = asyncHandler (async (req, res) => {
-    const {commentId} = req.params;
-    const {userId} = req.body;
+    const {commentId, userId} = req.params;
     console.log("Heyyy");
     console.log(commentId, userId);
     const likeExists = await Comment.findOne({_id:commentId}).where({'likes':userId});
     if(likeExists ) {
         console.log(likeExists);
         console.log("existed and has been pulled");
-        const comment = await Comment.updateOne( {_id:commentId},{$pull: {likes: userId}}, {new: true, validator: true});
-        return res.status(201).json({comment});
+        const comment = await Comment.findByIdAndUpdate( {_id:commentId},
+            {$pull: {likes: userId}}, 
+            {new: true, validator: true, includeResultMetadata: true});
+        console.log(comment.value);
+        return res.status(201).json({comment:comment.value});
     }else {
         console.log("not existed and has been pushed");
-        const comment = await Comment.updateOne({_id:commentId}, {$push: {likes:userId}}, {new: true, validator: true});
-        return res.status(201).json({comment});
+        const comment = await Comment.findByIdAndUpdate({_id:commentId}, {$push: {likes:userId}}, {new: true, validator: true, includeResultMetadata: true});
+        console.log(comment.value);
+        return res.status(201).json({comment: comment.value});
     }
 })
 
@@ -125,4 +128,4 @@ const sortComment = asyncHandler(async (req, res) => {
     }
 })
 
-module.exports = {getComment, sortComment, deleteComment, deleteCommentResponse, editComment, postComment, likeComment, likeCommentResponse, postCommentResponse, getCommentResponse};
+module.exports = {getCommentById, sortComment, deleteComment, deleteCommentResponse, editComment, postComment, likeComment, likeCommentResponse, postCommentResponse, getCommentResponse};
