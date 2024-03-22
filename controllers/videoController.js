@@ -4,17 +4,14 @@ const asyncHandler = require("express-async-handler");
 const Video = require("../models/Video");
 const postVideo =  asyncHandler ( async (req, res) => {
     try {
-        console.log("video has been posted");
+        console.log("video__ has been posted");
         console.log(req.file);
-        const {category, title, description, artistName, points, isPopular, 
+        const {category, title, description, artists, genre, points, isPopular,
             country, isReviewed, isShort} = req.body;
-        const extension = path.extname(req.file.originalname);
-        const size = req.file.size;
-        const pathx = req.protocol + "://" + req.get("host") + "/public/mimlyrics/" + req.file.filename;
-        const originalname = req.file.originalname;
-        const video = new Video({path:pathx, originalname: originalname, extension: extension, size: size, 
-             category: category, title:title, description: description, artistName: artistName, points: points,
-              country: country, isPopular: isPopular, isReviewed: isReviewed, isShort: isShort });
+        const pathx = req.protocol + "://" + req.get("host") + "/" + req.file.path;
+        const video = new Video({path:pathx, 
+             category: category, title:title, description: description, artists: artists, points: points,
+              country: country, genre: genre , isPopular: isPopular, isReviewed: isReviewed, isShort: isShort });
         await video.save();
         return res.status(201).json({video});
     }catch(err) {
@@ -26,7 +23,7 @@ const postVideo =  asyncHandler ( async (req, res) => {
 const getVideo =  async (req, res) => {
     try {
         const {category} = req.params;
-        const videos = await Video.find({category: category});
+        const videos = await Video.find({category: category}).sort({createdAt:-1});
         return res.status(201).json({videos});
     }catch(err) {
         throw new Error(`Something went wrong, while trying get request for our videos`);
@@ -34,12 +31,12 @@ const getVideo =  async (req, res) => {
 }
 
 const getVideoById = async (req, res) => {
-    const {id} = req.params;
+    const {videoId} = req.params;
     try {
-        const video = await Video.findById({_id: id});
+        const video = await Video.findById({_id: videoId});
         return res.status(201).json({video});
     }catch(err) {
-        throw new Error( {message: `Something went wrong, while trying get request for our videos`});
+        return res.status(404).json( {message: `Something went wrong, while trying get request for our videos`});
     }
 }
 
@@ -55,27 +52,39 @@ const getVideoById = async (req, res) => {
 
 const searchVideo = asyncHandler(async (req, res) => {
     const {searchId} = req.params;
-    const videos = await Video.find({});
-    if(videos) {
-        const searchvideos = videos.filter(video => video.title.toLowerCase().includes(searchId.toLowerCase()));
-        if(!searchvideos) {
-            searchvideos = videos.filter(video => video.artistName.toLowerCase().includes(searchId.toLowerCase()));
+    const svideos = await Video.find({});
+    if(svideos) {
+        const videos = svideos.filter(video => video.title.toLowerCase().includes(searchId.toLowerCase()));
+        if(!videos) {
+            videos = svideos.filter(video => video.artists[0].toLowerCase().includes(searchId.toLowerCase()));
         }
-        if(!searchvideos) {
-            searchvideos = videos.filter(video => video.category.toLowerCase().includes(searchId.toLowerCase()));
-        }if(!searchvideos) {
+        if(!videos) {
+            videos = svideos.filter(video => video.category.toLowerCase().includes(searchId.toLowerCase()));
+        }if(!videos) {
             console.log("humm");
-            searchvideos = videos.filter(video => video.country.toLowerCase().includes(searchId.toLowerCase()));
+            videos = svideos.filter(video => video.country.toLowerCase().includes(searchId.toLowerCase()));
         }
-        console.log(searchvideos);
-        return res.status(201).json({searchvideos});
+        console.log(videos);
+        return res.status(201).json({videos});
     }
 })
 
+const searchVideoByGenre = asyncHandler(async (req, res) => {
+    const {genre} = req.params;
+    const videos = await Video.find({genre: genre}).sort({createdAt: -1});
+    return res.status(201).json({videos});
+})
+
+const searchVideoByCategoryAndGenre = asyncHandler( async (req,res) => {
+    const {genre, category} = req.params;
+    const videos = await Video.find({$and: [{category: category}, {genre: genre}]}).sort({createdAt:-1});
+    return res.status(201).json({videos})
+})
+
 const deleteVideo =  asyncHandler( async (req, res) => {
-    const {id} = req.params;
+    const {videoId} = req.params;
     console.log("Hey bro");
-    const video = await Video.findByIdAndDelete({_id: id});
+    const video = await Video.findByIdAndDelete({_id: videoId});
     console.log(video.pathx);
     if(video.path) {
         const splitVideo = video.path.split(":5000");
@@ -91,29 +100,28 @@ const deleteVideo =  asyncHandler( async (req, res) => {
 
 const likeVideo = asyncHandler (async (req, res) => {
     const {userId} = req.body;
-    const {mediaId} = req.params;
-    const likeExists = await Video.findOne({_id:mediaId}).where({'likes': userId });
+    const {videoId} = req.params;
+    const likeExists = await Video.findOne({_id:videoId}).where({'likes': userId });
     console.log(likeExists);
     if(likeExists) {
-        const video = await Video.findByIdAndUpdate({_id: mediaId}, {$pull: {likes: userId}}, {new: true, validator: true});
+        const video = await Video.findByIdAndUpdate({_id: videoId}, {$pull: {likes: userId}}, {new: true, validator: true, includeResultMetadata: true});
         console.log('existed and has been pulled');
         if(video) {
-            return res.status(201).json({video});
+            return res.status(201).json({video:video.value});
         }
     }else {
-        const video = await Video.findByIdAndUpdate({_id: mediaId}, {$push: {likes: userId}}, {new: true, validator: true});
+        const video = await Video.findByIdAndUpdate({_id: videoId}, {$push: {likes: userId}}, {new: true, validator: true, includeResultMetadata: true});
         console.log(video);
         console.log("not existed and has been pushed");
         if(video) {
-            return res.status(201).json({video});
+            return res.status(201).json({video:video.value});
         }
     }
-
 })
 
 const videoViews = asyncHandler(  async (req, res) => {
-    const {mediaId} = req.params;
-    const video = await Video.updateOne({_id: mediaId}, {$inc: {views:1}}, {new:true, validator: true});
+    const {videoId} = req.params;
+    const video = await Video.updateOne({_id: videoId}, {$inc: {views:1}}, {new:true, validator: true});
     console.log(video);
     if(video) {
         return res.status(201).json({video});
@@ -121,8 +129,8 @@ const videoViews = asyncHandler(  async (req, res) => {
 })
 
 const downloadVideo = async (req, res) => {
-    const {id} = req.params;
-    const video = await Video.findById({_id:id});
+    const {videoId} = req.params;
+    const video = await Video.findById({_id:videoId});
     if(video) {
         const splitVideo = video.path.split(":5000");
         const downloadVideoPath = "." + splitVideo[1];
@@ -135,17 +143,19 @@ const downloadVideo = async (req, res) => {
 }
 
 const EditVideo = async (req, res) => {
-    const {id} = req.params
-    const video = await Video.findById({_id:id});
+    const {videoId} = req.params
+    const video = await Video.findById({_id:videoId});
     console.log(video);
     if(video) {
-        video.artistName = req.body.artistName || video.artistName,
+        video.artists = req.body.artists || video.artists,
+        video.genre = req.body.genre || video.genre;
         video.title = req.body.title || video.title,
         video.description = req.body.description || video.description
         video.country = req.body.country || video.country
         video.category = req.body.category || video.category
         video.points = req.body.points || video.points
         video.famous = req.body.famous || video.famous
+        video.isShort = req.body.isShort || video.isShort
         await video.save();
         return res.status(201).json({video});
     }else {
@@ -154,25 +164,23 @@ const EditVideo = async (req, res) => {
 }
 
 const similarVideo = asyncHandler(async (req, res) => {
-    const {mediaId} = req.params;
-    const video = await Video.findById({_id: mediaId});
-    if(video) {
-        const sVideo = await Video.find({country: video.country }).sort({createdAt: 1}).limit(15);
-        return res.status(201).json({sVideo});
-    }
+    const {genre, country} = req.params;
+    const videos = await Video.find({$or: [{genre: genre}, {country: country}] }).sort({createdAt: -1});
+    return res.status(201).json({videos});    
 })
 
-const putVideos = async () => {
-    const {id} = req.params;
-    const {views} = req.body;
+const putVideos = async (req, res) => {
+    console.log(req.params);
+    /*const {id} = req.params;
+    let {views} = req.body;
     parseInt(views);
     views +=views;
     const video = await Video.findById({_id: id});
     if(video) {
         video.views = parseInt(video.views) + 1 || views
     }
-    return res.status(201).json({video});
+    return res.status(201).json({video});*/
 }
 
 module.exports = {postVideo, similarVideo, videoViews, likeVideo, getVideo, 
-    putVideos, deleteVideo, searchVideo, getVideoById, EditVideo, downloadVideo};
+    putVideos, deleteVideo, searchVideo, searchVideoByGenre, searchVideoByCategoryAndGenre, getVideoById, EditVideo, downloadVideo};
