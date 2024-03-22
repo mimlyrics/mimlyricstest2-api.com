@@ -15,6 +15,8 @@ const albumSchema = mongoose.Schema({
     country: String,
     isPopular: Boolean,
     description: String,
+    date: String,
+    style: String,
     lyric: [ { 
         title: {type: String, default: () => ''},      
         artistName: {type:[String], default: []},
@@ -22,7 +24,9 @@ const albumSchema = mongoose.Schema({
         audio: {type: String, default: () => ''},
         originalname: {type: String, default: ()=> ''},
         views: {type: Number, default: () => 0},
-        likes: {type: [mongoose.SchemaTypes.ObjectId], default: () => []}
+        likes: {type: [mongoose.SchemaTypes.ObjectId], default: () => []},
+        shares: {type: Number, default: () => 0},
+        points: {type: Number, default: () => 0}
     }]    
 }, 
 {
